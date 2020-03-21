@@ -14,9 +14,12 @@ use App\Http\Resources\ChannelResource;
 use App\Http\Resources\TitleResource;
 use App\Http\Resources\PostResource;
 use App\Http\Resources\PostIndexResource;
+use App\Http\Resources\AdministrationResource;
 use App\Sosadfun\Traits\PageObjectTraits;
 use App\Sosadfun\Traits\AdministrationTraits;
+use App\Http\Resources\PaginateResource;
 use Cache;
+use Auth;
 
 class PageController extends Controller
 {
@@ -73,13 +76,23 @@ class PageController extends Controller
         ]);
     }
 
-    public function administration_records()
+    // all administration records
+    public function administration_records(Request $request)
     {
-        $records = Cache::remember('adminrecords-p'.$page, 2, function () use($page) {
-                return $this->findAdminRecords(0, $page, '', config('preference.index_per_page'));
-            });
+
+        $is_public = '';
+        // only clear administration reminder when he checks his own admin records
+        if (Auth::check()&&Auth::user()->isAdmin()) { $is_public = "include_private"; }
+
+        $page = is_numeric($request->page)? $request->page:'1';
+
+        $records = Cache::remember('adminrecords-p'.$page, 2, function () use($page, $is_public) {
+            return $this->findAdminRecords(0, $page, $is_public, config('preference.index_per_page'));
+        });
+
         return response()->success([
-// TODO 创建administration_record resource,在这里加载返回。注意，管理员能看到的信息比用户能看到的信息多。
+            'record' => AdministrationResource::collection($records),
+            'paginate' => new PaginateResource($records)
         ]);
     }
 }

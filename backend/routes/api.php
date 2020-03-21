@@ -55,7 +55,7 @@ Route::group(['middleware' => ['throttle:60,1,all']], function () {
     // 默认页面
     Route::get('/', 'API\PageController@home')->name('home');// 网站首页
 
-    Route::get('/administration_records', 'API\PageController@administration_records')->name('administration_record');// 管理目录
+    Route::get('/administration_records', 'API\PageController@administration_records');// 管理目录
 
     // 固定信息
     Route::get('config/allTags', 'API\PageController@allTags');

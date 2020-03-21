@@ -2,13 +2,12 @@
 namespace App\Sosadfun\Traits;
 
 trait AdministrationTraits{
-    public function findAdminRecords($id, $page=1, $is_public)
+    public function findAdminRecords($id, $page=1, $include_private, $pagination=30)
     {
         return \App\Models\Administration::with('operator')
         ->withAdministratee($id)
-        ->isPublic($is_public)
+        ->isPublic($include_private)
         ->latest()
-        ->paginate(config('preference.index_per_page'))
-        ->appends(['page'=>$page]);
+        ->paginate($pagination);
     }
 }
