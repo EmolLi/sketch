@@ -79,11 +79,8 @@ class PageController extends Controller
     // all administration records
     public function administration_records(Request $request)
     {
-
-        $is_public = '';
-        // only clear administration reminder when he checks his own admin records
-        if (Auth::check()&&Auth::user()->isAdmin()) { $is_public = "include_private"; }
-
+        $user = auth('api')->user();
+        $is_public = ($user && $user->isAdmin()) ? "include_private" : "";
         $page = is_numeric($request->page)? $request->page:'1';
 
         $records = Cache::remember('adminrecords-p'.$page, 2, function () use($page, $is_public) {

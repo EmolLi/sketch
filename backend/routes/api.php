@@ -55,7 +55,9 @@ Route::group(['middleware' => ['throttle:60,1,all']], function () {
     // 默认页面
     Route::get('/', 'API\PageController@home')->name('home');// 网站首页
 
+    // admin system
     Route::get('/administration_records', 'API\PageController@administration_records');// 管理目录
+    Route::get('/user/{user}/administration_records', 'API\MessageController@user_administration_records'); // get user admin records
 
     // 固定信息
     Route::get('config/allTags', 'API\PageController@allTags');
@@ -156,7 +158,6 @@ Route::group(['middleware' => ['throttle:60,1,all']], function () {
     // 消息部分
     Route::get('/user/{user}/activity', 'API\ActivityController@index');// 展示某用户的站内提醒，仅允许本人和管理员查询
     Route::post('/clearupdates', 'API\ActivityController@clearupdates');// 清除未读提醒
-    Route::get('/user/{user}/administration_record', 'API\MessageController@administration_record')->name('user.administration_record');// 展示某用户的被管理记录
 
     // 阅读历史保存?
 

@@ -10,7 +10,8 @@ use ConstantObjects;
 use CacheUser;
 use App\Sosadfun\Traits\AdminManageTraits;
 
-
+// QUESTION: 为什么controllers/API 里有一个 adminController,
+// controllers/ 里也有一个adminController 呢?
 class AdminController extends Controller
 {
     use AdminManageTraits;
