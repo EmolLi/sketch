@@ -180,6 +180,11 @@ class User extends Authenticatable
         return $this->hasMany(HistoricalUserSession::class, 'user_id');
     }
 
+    public function userlogins()
+    {
+        return $this->hasMany(HistoricalUserLogin::class, 'user_id');
+    }
+
     public function invitation_tokens()
     {
         return $this->hasMany(InvitationToken::class, 'user_id');

@@ -162,4 +162,12 @@ return [
         'neutral' => '中性',
         'reward' => '奖励',
     ],
+    'administration_searchrecord_nametype' => [
+        'user_id', 'is_forbidden', 'username', 'email',
+        'ip_address', 'latest_created_user', 'latest_invited_user',
+        'latest_email_modification', 'latest_password_reset',
+        'max_suspicious_sessions', 'active_suspicious_sessions',
+        'application_essay_like', 'application_record_id',
+        'quote_like', 'newest_long_post'
+    ]
 ];

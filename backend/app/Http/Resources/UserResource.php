@@ -43,6 +43,14 @@ class UserResource extends JsonResource
             'title' => new TitleBriefResource($user->title),
             'info' => new UserInfoResource($info),
             'intro' => $intro,
+            $this->mergeWhen(auth('api')->check() && auth('api')->user()->isAdmin(), [ // 这部分是仅管理可见的
+                'email_modifications' => HistoricalEmailModificationResource::collection($user->emailmodifications),
+                'password_resets' => HistoricalPasswordResetResource::collection($user->passwordresets),
+                'registration_applications' => RegistrationApplicationResource::collection($user->registrationapplications),
+                'donations' => DonationRecordResource::collection($user->donations),
+                'user_sessions' => UserSessionResource::collection($user->usersessions),
+                'user_logins' => UserLoginResource::collection($user->userlogins),
+            ]),
         ];
     }
 }
