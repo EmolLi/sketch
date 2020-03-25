@@ -1,5 +1,7 @@
 <?php
 namespace App\Sosadfun\Traits;
+use App\Models\Post;
+use App\Models\User;
 use StringProcess;
 use Carbon;
 use Auth;
@@ -10,13 +12,14 @@ trait AdminManageTraits{
 
     public function update_report($request)
     {
-        $post = \App\Models\Post::find($request->report_post_id);
-        if(!$post||$post->type!='case'){abort(403);}
+        $post = Post::find($request->report_post_id);
+        if(!$post || $post->type!='case'){ abort(420, '举报贴不存在'); }
         $info = $post->info;
-        if(!$info){abort(403);}
-        if($info->reviewee_type!=$request->content_type||$info->reviewee_id!=$request->content_id){abort(403);}
+        if(!$info){ abort(420, '举报贴信息有误'); }
+        if($info->reviewee_type!=$request->content_type ||
+            $info->reviewee_id!=$request->content_id){ abort(420, '举报贴信息有误'); }
 
-        $info->summary = array_key_exists($request->report_summary, config('constants.report_case_summary'))? $request->report_summary:null;
+        $info->summary = $request->report_summary;
         $info->save();
         $this->clearPost($request->report_post_id);
         return $post;
@@ -31,6 +34,8 @@ trait AdminManageTraits{
         );
     }
 
+    // TODO: a lot of opposite operations can be merge
+    // e.g. content_fold, content_unfold can share one param and function
     public function content_N_user_management($request)
     {
         $task = '';
@@ -40,73 +45,73 @@ trait AdminManageTraits{
         $content = $this->find_content($request);
 
         if($content){
+            $content_type = $request->content_type;
             if($request->content_fold){
-                $task .= $this->content_fold($request->content_type, $content);
+                $task .= $this->content_fold($content_type, $content);
             }
             if($request->content_unfold){
-                $task .= $this->content_unfold($request->content_type, $content);
+                $task .= $this->content_unfold($content_type, $content);
             }
             if($request->content_is_bianyuan){
-                $task .= $this->content_is_bianyuan($request->content_type, $content);
+                $task .= $this->content_is_bianyuan($content_type, $content);
             }
             if($request->content_not_bianyuan){
-                $task .= $this->content_not_bianyuan($request->content_type, $content);
+                $task .= $this->content_not_bianyuan($content_type, $content);
             }
             if($request->content_not_public){
-                $task .= $this->content_not_public($request->content_type, $content);
+                $task .= $this->content_not_public($content_type, $content);
             }
             if($request->content_is_public){
-                $task .= $this->content_is_public($request->content_type, $content);
+                $task .= $this->content_is_public($content_type, $content);
             }
             if($request->content_no_reply){
-                $task .= $this->content_no_reply($request->content_type, $content);
+                $task .= $this->content_no_reply($content_type, $content);
             }
             if($request->content_allow_reply){
-                $task .= $this->content_allow_reply($request->content_type, $content);
+                $task .= $this->content_allow_reply($content_type, $content);
             }
             if($request->content_lock){
-                $task .= $this->content_lock($request->content_type, $content);
+                $task .= $this->content_lock($content_type, $content);
             }
             if($request->content_unlock){
-                $task .= $this->content_unlock($request->content_type, $content);
+                $task .= $this->content_unlock($content_type, $content);
             }
             if($request->content_change_channel){
-                $task .= $this->content_change_channel($request->content_type, $content, $request->content_change_channel_id);
+                $task .= $this->content_change_channel($content_type, $content, $request->content_change_channel_id);
             }
             if($request->content_pull_up){
-                $task .= $this->content_pull_up($request->content_type, $content);
+                $task .= $this->content_pull_up($content_type, $content);
             }
             if($request->content_pull_down){
-                $task .= $this->content_pull_down($request->content_type, $content);
+                $task .= $this->content_pull_down($content_type, $content);
             }
             if($request->add_tag){
-                $task .= $this->add_tag($request->content_type, $request->add_tag, $content);
+                $task .= $this->add_tag($content_type, $request->add_tag, $content);
             }
             if($request->remove_tag){
-                $task .= $this->remove_tag($request->content_type, $request->remove_tag, $content);
+                $task .= $this->remove_tag($content_type, $request->remove_tag, $content);
             }
             if($request->add_tag_to_all_components){
-                $task .= $this->add_tag_to_all_components($request->content_type, $request->add_tag_to_all_components, $content);
+                $task .= $this->add_tag_to_all_components($content_type, $request->add_tag_to_all_components, $content);
             }
             if($request->remove_tag_from_all_components){
-                $task .= $this->remove_tag_from_all_components($request->content_type, $request->remove_tag_from_all_components, $content);
+                $task .= $this->remove_tag_from_all_components($content_type, $request->remove_tag_from_all_components, $content);
             }
             if($request->content_remove_anonymous){
-                $task .= $this->content_remove_anonymous($request->content_type, $content);
+                $task .= $this->content_remove_anonymous($content_type, $content);
             }
             if($request->content_is_anonymous){
-                $task .= $this->content_is_anonymous($request->content_type, $request->majia, $content);
+                $task .= $this->content_is_anonymous($content_type, $request->majia, $content);
             }
             if($request->content_type_change){
-                $task .= $this->content_type_change($request->content_type, $request->content_type_change_to, $content);
+                $task .= $this->content_type_change($content_type, $request->content_type_change_to, $content);
             }
             if($request->content_delete){
-                $to_be_deleted = $content;
-                $task .= $this->content_delete($to_be_deleted);
+                $task .= $this->content_delete($content);
             }
 
         }
-        $user = \App\Models\User::find($request->content_user_id);
+        $user = User::find($request->content_user_id);
         if($user){
             $user_task = '';
 
@@ -134,7 +139,7 @@ trait AdminManageTraits{
             if($request->user_level_clear){
                 $user_task .= $this->user_level_clear($user);
             }
-            if($request->user_invitation_clear>0){
+            if($request->user_invitation_clear){
                 $user_task .= $this->user_invitation_clear($user);
             }
             if($request->user_value_change){
@@ -156,7 +161,7 @@ trait AdminManageTraits{
             }
         }
 
-        if(!$task){return;}
+        if(!$task) {return;}
 
         if($request->report_post_id){$task = '举报受理：'.$task;}
 
@@ -165,20 +170,20 @@ trait AdminManageTraits{
         }
         if($request->content_type==='post'&&$content){
             $this->clearPost($content->id);
-            // $this->clear_thread_posts_with_query($content->thread_id, $request);
         }
 
         $administration = \App\Models\Administration::create([
-            'user_id' => Auth::id(),
-            'task' =>$task,
+            'user_id' => auth('api')->id,
+            'task' => $task,
             'reason' => $request->reason,
-            'record' => $this->generate_admin_record($request,$content,$user),
-            'administratee_id' => $user?$user->id:0,
+            'record' => $this->generate_admin_record($request, $content, $user),
+            'administratee_id' => $user ? $user->id : 0,
             'administratable_type' => $request->content_type,
-            'administratable_id' => $request->content_type==="user"? ($user?$user->id:0):($content?$content->id:0),
-            'is_public' => $request->record_not_public?false:true,
-            'summary' => $request->administration_summary??null,
-            'report_post_id' => $request->report_post_id?$request->report_post_id:0,
+            'administratable_id' => $request->content_type === "user" ?
+                ($user ? $user->id : 0) : ($content ? $content->id : 0),
+            'is_public' => !$request->record_not_public,
+            'summary' => $request->administration_summary,
+            'report_post_id' => $request->report_post_id ? $request->report_post_id : 0,
         ]);
 
         if($administration&&$user){
@@ -188,15 +193,16 @@ trait AdminManageTraits{
         return $administration;
     }
 
+    // 处理中立/不赞成的举报
     public function report_management($request, $report_post)
     {
         $task = '';
-        if(!$request->report_post_id||$request->report_summary==='approve'){
-            return ;// 如果同意举报，不处理
+        if(!$request->report_post_id || $request->report_summary==='approve'){
+            return ;// 如果同意举报，不处理, 之前已经处理过了
         }
-        if(!$report_post){return;} // 找不到report_post的话后面也不继续了
+        if(!$report_post){ return; } // 找不到report_post的话后面也不继续了
 
-        $user = \App\Models\User::find($report_post->user_id);
+        $user = User::find($report_post->user_id);
 
         if($user){
             $user_task = '';
@@ -232,15 +238,15 @@ trait AdminManageTraits{
         $task = '举报行为管理：'.$task;
 
         $administration = \App\Models\Administration::create([
-            'user_id' => Auth::id(),
-            'task' =>$task,
+            'user_id' => auth('api')->id(),
+            'task' => $task,
             'reason' => $request->reason,
             'record' => $this->generate_record('post',$report_post),
-            'administratee_id' => $user?$user->id:0,
+            'administratee_id' => $user ? $user->id:0,
             'administratable_type' => 'post',
             'administratable_id' => $report_post->id,
-            'is_public' => $request->record_not_public?false:true,
-            'summary' => $request->administration_summary??'',
+            'is_public' => !$request->record_not_public,
+            'summary' => $request->administration_summary,
             'report_post_id' => $request->report_post_id,
         ]);
 
@@ -250,6 +256,7 @@ trait AdminManageTraits{
 
         return $administration;
     }
+
 
     private function generate_admin_record($request, $content, $user)
     {
@@ -618,6 +625,7 @@ trait AdminManageTraits{
             $info = $user->info;
             $info->salt = 0;
             $info->fish = 0;
+            $info->ham = 0;
             $info->token_limit = 0;
             $user->save();
             $info->save();
@@ -628,7 +636,7 @@ trait AdminManageTraits{
     private function user_invitation_clear($user)
     {
         $info = $user->info;
-        if($user&&$info){
+        if($user&&$info&&$info->token_limit>0){
             $info->token_limit = 0;
             $user->save();
             $info->save();
