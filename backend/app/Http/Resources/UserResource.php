@@ -14,13 +14,21 @@ class UserResource extends JsonResource
      */
     public function toArray($request)
     {
-        $user = $this['user'];
-        $info = $this['info'];
-
+        $user = null;
+        $info = null;
         $intro = null;
-        if($this['intro']) {
-            $intro = new UserIntroResource($this['intro']);
+        if (is_array($this)) {
+            $user = $this['user'];
+            $info = $this['info'];
+            if($this['intro']) {
+                $intro = new UserIntroResource($this['intro']);
+            }
+        } else {
+            $user = $this;
+            $info = $this->info;
+            if ($this->intro) $intro = new UserIntroResource($this->intro);
         }
+
 
         return [
             'type' => 'user',
@@ -37,6 +45,7 @@ class UserResource extends JsonResource
                 'no_ads' => (boolean)$user->no_ads,
                 'no_homework' => (boolean)$user->no_posting,
                 $this->mergeWhen(auth('api')->check() && (auth('api')->user()->isAdmin()||auth('api')->id()===$user->id), [
+                    'email' => (string)$user->email,
                     'created_at' => (string)$user->created_at,
                 ]),
             ],

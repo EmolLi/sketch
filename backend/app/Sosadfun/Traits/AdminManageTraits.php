@@ -9,6 +9,8 @@ use ConstantObjects;
 
 trait AdminManageTraits{
     use FindModelTrait;
+    use PostObjectTraits;   // QUESTION:为了过渡系统,用了clearPost,但却没有extend PostObjectTraits呢?
+    use ThreadObjectTraits;
 
     public function update_report($request)
     {
@@ -43,7 +45,6 @@ trait AdminManageTraits{
             return ;// 如果是举报，但并非通过举报，不处理。
         }
         $content = $this->find_content($request);
-
         if($content){
             $content_type = $request->content_type;
             if($request->content_fold){
@@ -160,7 +161,6 @@ trait AdminManageTraits{
                 $task .=$user_task;
             }
         }
-
         if(!$task) {return;}
 
         if($request->report_post_id){$task = '举报受理：'.$task;}
@@ -173,7 +173,7 @@ trait AdminManageTraits{
         }
 
         $administration = \App\Models\Administration::create([
-            'user_id' => auth('api')->id,
+            'user_id' => auth('api')->id(),
             'task' => $task,
             'reason' => $request->reason,
             'record' => $this->generate_admin_record($request, $content, $user),
@@ -189,7 +189,6 @@ trait AdminManageTraits{
         if($administration&&$user){
             $user->remind('new_administration');
         }
-
         return $administration;
     }
 

@@ -11,7 +11,19 @@ use App\Models\PublicNotice;
 use App\Models\Administration;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\AdministrationResource;
+use App\Http\Resources\UserResource;
+use App\Http\Resources\HistoricalEmailModificationResource;
+use App\Http\Resources\DonationRecordResource;
 use App\Http\Resources\PaginateResource;
+use App\Http\Resources\RegistrationApplicationResource;
+use App\Http\Resources\FirewallEmailResource;
+use App\Http\Resources\HistoricalPasswordResetResource;
+use App\Http\Resources\QuoteResource;
+use App\Http\Resources\UserLoginResource;
+use App\Http\Resources\PostBriefResource;
+
+
 use DB;
 use ConstantObjects;
 use CacheUser;
@@ -36,16 +48,15 @@ class AdminController extends Controller
     public function management(Request $request){
         $this->validateManagementInput($request);
         $administration = null;
-        if (($request->report_post_id && !$request->report_summary) ||
-            (!$request->report_post_id && $request->report_summary)) {
+        if ((isset($request->report_post_id) && !isset($request->report_summary)) ||
+            (!isset($request->report_post_id) && isset($request->report_summary))) {
                 abort(422, '处理举报需同时填写report_post_id和report_post_summary');
             }
 
         if($request->report_post_id){
             $report_post = $this->update_report($request);
         }
-
-        if(!$request->report_post_id||($request->report_post_id&&$request->report_summary==="approve")){
+        if(!isset($request->report_post_id)||($request->report_post_id&&$request->report_summary==="approve")){
             // 如果并非举报，直接处理。如果是举报，且通过举报，处理被举报内容
             $administration = $this->content_N_user_management($request);
         }
@@ -53,17 +64,21 @@ class AdminController extends Controller
         if($request->report_post_id&&$request->report_summary!="approve"){
             $administration = $this->report_management($request, $report_post);
         }
-        return response()->success($administration ? null : new AdministrationResource($administration));
+        if (is_null($administration)) { abort(420, '没有可实施的操作'); }
+        return response()->success(new AdministrationResource($administration));
     }
 
     private function validateManagementInput(Request $request){
         $this->validate($request, [
             'content_id' => 'required|numeric',
-            'content_type' => 'required|in:'.(implode(",",array_keys(config('content_types')))),
+            'content_type' => 'required|in:'.(
+                implode(",",array_keys(config('constants.content_types')))),
             'reason' => 'required|string',
-            'administration_summary' => 'required|in:'.(implode(",",array_keys(config('administration_summary')))),
-            'report_post_id' => 'string',
-            'report_summary' => 'in:'.(implode(",",array_keys(config('report_case_summary')))),
+            'administration_summary' => 'required|in:'.(
+                implode(",",array_keys(config('constants.administration_summary')))),
+            'report_post_id' => 'numeric',
+            'report_summary' => 'in:'.(
+                implode(",",array_keys(config('constants.report_case_summary')))),
             'record_not_public' => 'boolean',
 
             // 被管理内容的处理
@@ -88,7 +103,8 @@ class AdminController extends Controller
             'content_remove_anonymous' => 'boolean',
             'content_is_anonymous' => 'boolean',
             'majia' => 'string',
-            'content_type_change' => 'in:'.(implode(",",array_keys(config('constants.post_types')))),
+            'content_type_change' => 'in:'.(
+                implode(",",array_keys(config('constants.post_types')))),
             'content_delete' => 'boolean',
 
             // 对被管理内容创建者的管理(以及如果被管理内容就是用户的时候，直接管理用户)
@@ -118,12 +134,12 @@ class AdminController extends Controller
     // 必填
     // content_id(被管理内容的id)
     // content_type(被管理内容的type，可为thread,post,user,quote,status)
-    // report_post_id(如果是举报，必须输入对应的举报正文post_id)
-    // report_summary='approve'/'disapprove'/'abuse'（如果是举报，输入举报性质判断，受理/暂不受理/滥用举报）
     // reason=(string)（举报具体理由原因，如“违规发文/断头车”等等）
     // administration_summary='punish'/'neutral'/'reward'（这个管理是什么性质，奖励还是惩罚）
     // ```
     // ### Optional 选填
+    // report_post_id(如果是举报，必须输入对应的举报正文post_id)
+    // report_summary='approve'/'disapprove'/'abuse'（如果是举报，输入举报性质判断，受理/暂不受理/滥用举报）
     // ```
     // 被管理内容的处理：
     // content_fold（内容折叠：如果存在本项就处理）
@@ -192,19 +208,19 @@ class AdminController extends Controller
         $this->validate($request, [
             'name' => 'nullable|string|min:1|max:191',
             'name_type' => 'required|in:'.(
-                implode(",", array_keys(config('administration_searchrecord_nametype')))),
+                implode(",", config('constants.administration_searchrecord_nametype'))),
         ]);
 
         $name = $request->name;
-        $users = [];
-        $email_modification_records = [];
-        $password_reset_records = [];
-        $donation_records = [];
-        $application_records = [];
-        $black_list_emails = [];
-        $quotes = [];
-        $user_logins = [];
-        $posts = [];
+        $users = null;
+        $email_modification_records = null;
+        $password_reset_records = null;
+        $donation_records = null;
+        $application_records = null;
+        $black_list_emails = null;
+        $quotes = null;
+        $user_logins = null;
+        $posts = null;
 
         if($request->name_type == 'user_id'){
             $users = User::with('emailmodifications',
@@ -374,23 +390,63 @@ class AdminController extends Controller
             ->paginate(config('preference.records_per_part'))
             ->appends($request->only('page','name','name_type'));
         }
-        return response()->success([
-            'users' => UserResource::collection($users),
-            'name' => $name,
-            'email_modification_records' =>
-                HistoricalEmailModificationResource::collection($email_modification_records),
-            'donation_records' =>
-                DonationRecordResource::collection($donation_records),
-            'application_records' =>
-                RegistrationApplicationResource::collection($application_records),
-            'black_list_emails' =>
-                FirewallEmail::collection($black_list_emails),
-            'password_reset_records' =>
-                HistoricalPasswordResetResource::collection($password_reset_records),
-            'quotes' => QuoteResource::collection($quotes),
-            'user_logins' => UserLoginResource::collection($user_logins),
-            'posts' => PostBriefResource::collection($posts),   // FIXME:不完全确定前端需要多少,先用brief吧,不行再改
-        ])
+        $response = [];
+        $response['name'] = $name;
+        if ($users) {
+            $response['users'] = [
+                'data' => UserResource::collection($users),
+                'paginate' => new PaginateResource($users)
+            ];
+        }
+        if ($email_modification_records) {
+            $response['email_modification_records'] = [
+                'data' => HistoricalEmailModificationResource::collection($email_modification_records),
+                'paginate' => new PaginateResource($email_modification_records)
+            ];
+        }
+        if ($donation_records) {
+            $response['donation_records'] = [
+                'data' => DonationRecordResource::collection($donation_records),
+                'paginate' => new PaginateResource($donation_records)
+            ];
+        }
+        if ($application_records) {
+            $response['application_records'] = [
+                'data' => RegistrationApplicationResource::collection($application_records),
+                'paginate' => new PaginateResource($application_records)
+            ];
+        }
+        if ($black_list_emails) {
+            $response['black_list_emails'] = [
+                'data' => FirewallEmailResource::collection($black_list_emails),
+                'paginate' => new PaginateResource($black_list_emails)
+            ];
+        }
+        if ($password_reset_records) {
+            $response['password_reset_records'] = [
+                'data' => HistoricalPasswordResetResource::collection($password_reset_records),
+                'paginate' => new PaginateResource($password_reset_records)
+            ];
+        }
+        if ($quotes) {
+            $response['quotes'] = [
+                'data' => QuoteResource::collection($quotes),
+                'paginate' => new PaginateResource($quotes)
+            ];
+        }
+        if ($user_logins) {
+            $response['user_logins'] = [
+                'data' => UserLoginResource::collection($user_logins),
+                'paginate' => new PaginateResource($user_logins)
+            ];
+        }
+        if ($posts) {
+            $response['posts'] = [
+                'data' => PostBriefResource::collection($posts),   // FIXME:不完全确定前端需要多少,先用brief吧,不行再改
+                'paginate' => new PaginateResource($posts)
+            ];
+        }
+        return response()->success($response);
     }
 
 }
