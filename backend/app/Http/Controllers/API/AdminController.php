@@ -206,7 +206,7 @@ class AdminController extends Controller
         $user_logins = [];
         $posts = [];
 
-        if($request->name_type && $request->name_type=='user_id'){
+        if($request->name_type == 'user_id'){
             $users = User::with('emailmodifications',
                 'passwordresets', 'registrationapplications.reviewer',
                 'donations', 'info', 'usersessions', 'userlogins')
@@ -215,7 +215,9 @@ class AdminController extends Controller
             ->appends($request->only('page','name','name_type'));
         }
 
-        if($request->name_type=='is_forbidden'){
+        if($request->name_type == 'is_forbidden'){
+            // QUESTION: 如果这里,我先select user_infos where is_forbidden = 1
+            // 再join user,有可能会快一点嘛? (也许query builder自己就会优化query?)
             $users = User::with('emailmodifications', 'passwordresets',
                 'registrationapplications.reviewer', 'donations', 'info',
                 'usersessions', 'userlogins')
@@ -372,8 +374,23 @@ class AdminController extends Controller
             ->paginate(config('preference.records_per_part'))
             ->appends($request->only('page','name','name_type'));
         }
-
-        return view('admin.searchrecords', compact('users','name','email_modification_records','donation_records','application_records','black_list_emails','password_reset_records','quotes','user_logins','posts'));
+        return response()->success([
+            'users' => UserResource::collection($users),
+            'name' => $name,
+            'email_modification_records' =>
+                HistoricalEmailModificationResource::collection($email_modification_records),
+            'donation_records' =>
+                DonationRecordResource::collection($donation_records),
+            'application_records' =>
+                RegistrationApplicationResource::collection($application_records),
+            'black_list_emails' =>
+                FirewallEmail::collection($black_list_emails),
+            'password_reset_records' =>
+                HistoricalPasswordResetResource::collection($password_reset_records),
+            'quotes' => QuoteResource::collection($quotes),
+            'user_logins' => UserLoginResource::collection($user_logins),
+            'posts' => PostBriefResource::collection($posts),   // FIXME:不完全确定前端需要多少,先用brief吧,不行再改
+        ])
     }
 
 }
