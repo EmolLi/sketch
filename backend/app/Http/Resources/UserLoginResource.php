@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Http\Resources;
-use Carbon;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class UserLoginResource extends JsonResource
@@ -20,7 +19,7 @@ class UserLoginResource extends JsonResource
             'id' => (int)$this->id,
             'attributes' => [
                 'user_id' => (int)$this->user_id,
-                'created_at' => Carbon::parse($this->created_at),
+                'created_at' => (string)$this->created_at,
                 'ip' => (string)$this->ip,
                 'device' => (string)$this->device,
             ]

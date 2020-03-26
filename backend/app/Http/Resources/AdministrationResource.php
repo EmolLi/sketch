@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources;
 
-use Carbon\Carbon;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class AdministrationResource extends JsonResource
@@ -23,8 +22,8 @@ class AdministrationResource extends JsonResource
                 'task' => (string)$this->task,
                 'reason' => (string)$this->reason,
                 'record' => (string)$this->record,
-                'created_at' => Carbon::parse($this->created_at),
-                'deleted_at' => Carbon::parse($this->deleted_at),
+                'created_at' => (string)$this->created_at,
+                'deleted_at' => (string)$this->deleted_at,
                 'administratee_id' => (int)$this->administratee_id,
                 'administratable_type' => (string)$this->administratable_type,
                 'administratable_id' => (int)$this->administratable_id,

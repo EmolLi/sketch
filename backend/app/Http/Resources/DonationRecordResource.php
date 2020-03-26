@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Http\Resources;
-use Carbon;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class DonationRecordResource extends JsonResource
@@ -21,7 +20,7 @@ class DonationRecordResource extends JsonResource
             'attributes' => [
                 'user_id' => (int)$this->user_id,
                 'donation_email' => (string)$this->donation_email,
-                'donated_at' => Carbon::parse($this->donated_at),
+                'donated_at' => (string)$this->donated_at,
                 'donation_amount' => (int)$this->donation_amount,
                 'show_amount' => (boolean)$this->show_amount,
                 'is_anonymous' => (boolean)$this->is_anonymous,

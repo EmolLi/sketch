@@ -56,10 +56,10 @@ Route::group(['middleware' => ['throttle:60,1,all']], function () {
     Route::get('/', 'API\PageController@home')->name('home');// 网站首页
 
     // admin system
-    Route::get('/administration_records', 'API\PageController@administration_records');// 管理目录
-    Route::get('/user/{user}/administration_records', 'API\MessageController@user_administration_records'); // get user admin records
+    Route::get('administration_records', 'API\PageController@administration_records');// 管理目录
+    Route::get('user/{user}/administration_records', 'API\MessageController@user_administration_records'); // get user admin records
     Route::post('admin/management','API\AdminController@management');
-    Route::get('/admin/searchrecords', 'API\AdminController@searchrecords');//管理员搜索否存在某用户的结果
+    Route::get('admin/searchrecords', 'API\AdminController@searchrecords');//管理员搜索否存在某用户的结果
     // 固定信息
     Route::get('config/allTags', 'API\PageController@allTags');
     Route::get('config/allChannels', 'API\PageController@allChannels');

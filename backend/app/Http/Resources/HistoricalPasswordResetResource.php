@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Http\Resources;
-use Carbon;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class HistoricalPasswordResetResource extends JsonResource
@@ -21,9 +20,9 @@ class HistoricalPasswordResetResource extends JsonResource
             'attributes' => [
                 'user_id' => (int)$this->user_id,
                 'ip_address' => (string)$this->ip_address,
-                'created_at' => Carbon::parse($this->created_at),
+                'created_at' => (string)$this->created_at,
                 'old_password' => (string)$this->old_password,
-                'admin_reset' => Carbon::parse($this->admin_reset),
+                'admin_reset' => (string)$this->admin_reset,
             ]
         ];
     }

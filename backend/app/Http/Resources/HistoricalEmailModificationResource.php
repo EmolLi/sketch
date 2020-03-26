@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Http\Resources;
-use Carbon;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class HistoricalEmailModificationResource extends JsonResource
@@ -24,10 +23,10 @@ class HistoricalEmailModificationResource extends JsonResource
                 'old_email' => (string)$this->old_email,
                 'new_email' => (string)$this->new_email,
                 'ip_address' => (string)$this->ip_address,
-                'created_at' => Carbon::parse($this->created_at),
-                'old_email_verified_at' => Carbon::parse($this->old_email_verified_at),
-                'email_changed_at' => Carbon::parse($this->email_changed_at),
-                'admin_revoked_at' => Carbon::parse($this->admin_revoked_at),
+                'created_at' => (string)$this->created_at,
+                'old_email_verified_at' => (string)$this->old_email_verified_at,
+                'email_changed_at' => (string)$this->email_changed_at,
+                'admin_revoked_at' => (string)$this->admin_revoked_at,
             ]
         ];
     }

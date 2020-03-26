@@ -112,7 +112,9 @@ trait AdminManageTraits{
             }
 
         }
-        $user = User::find($request->content_user_id);
+        // QUESTION:我这样改阔以嘛.. 这样request就不用pass content_user_id了
+        // $user = User::find($request->content_user_id);
+        $user = User::find($content->user_id);
         if($user){
             $user_task = '';
 
