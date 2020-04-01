@@ -25,8 +25,8 @@ class AdminSystemTest extends TestCase
     protected function setUp()
     {
         parent::setUp();
-        $this->userA = factory('App\Models\User')->create();
-        $this->userB = factory('App\Models\User')->create();
+        $this->userA = factory('App\Models\User')->create();    // thread author
+        $this->userB = factory('App\Models\User')->create();    // post author
         $this->admin = factory('App\Models\User')->create(['role' => 'admin']);
 
         // create thread
@@ -88,7 +88,10 @@ class AdminSystemTest extends TestCase
             ]);
     }
 
-
+    // ================================================
+    // ================ management ====================
+    //=================================================
+    // fold and unfold a post
     /** @test */
     public function fold_a_post(){
         $manageCommonData = [
@@ -112,13 +115,13 @@ class AdminSystemTest extends TestCase
         $manageFoldData = array_merge($manageCommonData, [ 'content_fold' => true ]);
         $response = $this->json('POST', 'api/admin/management', $manageFoldData)
                 ->assertStatus(200);
-        $attributes =  $response->decodeResponseJson()['data']['attributes'];
+        $attributes = $response->decodeResponseJson()['data']['attributes'];
         $this->assertEquals($this->admin->id, $attributes['user_id']);
         $this->assertEquals('折叠|', $attributes['task']);
         $this->assertEquals($this->userB->id, $attributes['administratee_id']);
         $this->assertEquals('post', $attributes['administratable_type']);
-        $this->assertEquals($this->post->id, $attributes['is_public']);
-        $this->assertEquals(true, $attributes['administratee_id']);
+        $this->assertEquals(true, $attributes['is_public']);
+        $this->assertEquals($this->post->id, $attributes['administratable_id']);
         $this->assertEquals(0, $attributes['report_post_id']);
 
         // post get folded
@@ -140,10 +143,257 @@ class AdminSystemTest extends TestCase
         $manageUnfoldData = array_merge($manageCommonData, [ 'content_unfold' => true ]);
         $request = $this->json('POST', 'api/admin/management', $manageUnfoldData)
                 ->assertStatus(200);
+
         // post get unfolded
         $post = Post::find($this->post->id);
         $this->assertEquals(0, $post->fold_state);
     }
+
+    // set a thread bianyuan and then non-bianyuan
+    /** @test */
+    public function set_thread_bianyuan(){
+        $manageCommonData = [
+            'content_id' => $this->thread->id,
+            'content_type' => 'thread',
+            'reason' => 'test bianyuan',
+            'administration_summary' => 'punish',
+        ];
+
+        $userInfo = $this->userA->info()->first();
+        $userUnreadReminders = $userInfo->unread_reminders;
+        $userAdminReminders = $userInfo->administration_reminders;
+
+
+        $this->actingAs($this->admin, 'api');
+        $manageData = array_merge($manageCommonData, [ 'content_is_bianyuan' => true ]);
+        $response = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(200);
+        $attributes = $response->decodeResponseJson()['data']['attributes'];
+        $this->assertEquals($this->admin->id, $attributes['user_id']);
+        $this->assertEquals('转为边限|', $attributes['task']);
+        $this->assertEquals($this->userA->id, $attributes['administratee_id']);
+        $this->assertEquals('thread', $attributes['administratable_type']);
+        $this->assertEquals($this->thread->id, $attributes['administratable_id']);
+        $this->assertEquals(true, $attributes['is_public']);
+        $this->assertEquals(0, $attributes['report_post_id']);
+
+        $thread = Thread::find($this->thread->id);
+        $this->assertEquals(1, $thread->is_bianyuan);
+        // userA should be notified;
+        $userInfo = UserInfo::find($this->userA->id);
+        $this->assertEquals($userAdminReminders + 1,
+            $userInfo->administration_reminders);
+        $this->assertEquals($userUnreadReminders + 1,
+            $userInfo->unread_reminders);
+
+        $request = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(420);    // '没有可实施的操作'
+
+        // now undo the operation
+        $manageData = array_merge($manageCommonData, [ 'content_not_bianyuan' => true ]);
+        $request = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(200);
+
+        $thread = Thread::find($this->thread->id);
+        $this->assertEquals(0, $thread->is_bianyuan);
+    }
+
+    // set a thread private and then public
+    /** @test */
+    public function set_thread_public(){
+        $manageCommonData = [
+            'content_id' => $this->thread->id,
+            'content_type' => 'thread',
+            'reason' => 'test public',
+            'administration_summary' => 'punish',
+        ];
+
+        $userInfo = $this->userA->info()->first();
+        $userUnreadReminders = $userInfo->unread_reminders;
+        $userAdminReminders = $userInfo->administration_reminders;
+
+        $this->actingAs($this->admin, 'api');
+        $manageData = array_merge($manageCommonData, [ 'content_not_public' => true ]);
+        $response = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(200);
+        $attributes = $response->decodeResponseJson()['data']['attributes'];
+        $this->assertEquals($this->admin->id, $attributes['user_id']);
+        $this->assertEquals('隐藏|', $attributes['task']);
+        $this->assertEquals($this->userA->id, $attributes['administratee_id']);
+        $this->assertEquals('thread', $attributes['administratable_type']);
+        $this->assertEquals($this->thread->id, $attributes['administratable_id']);
+        $this->assertEquals(true, $attributes['is_public']);
+        $this->assertEquals(0, $attributes['report_post_id']);
+
+        $thread = Thread::find($this->thread->id);
+        $this->assertEquals(0, $thread->is_public);
+        // userA should be notified;
+        $userInfo = UserInfo::find($this->userA->id);
+        $this->assertEquals($userAdminReminders + 1,
+            $userInfo->administration_reminders);
+        $this->assertEquals($userUnreadReminders + 1,
+            $userInfo->unread_reminders);
+
+        $request = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(420);    // '没有可实施的操作'
+
+        // now undo the operation
+        $manageData = array_merge($manageCommonData, [ 'content_is_public' => true ]);
+        $request = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(200);
+
+        $thread = Thread::find($this->thread->id);
+        $this->assertEquals(1, $thread->is_public);
+    }
+
+    // set a thread no_reply and then undo the action
+    /** @test */
+    public function set_thread_no_reply(){
+        $manageCommonData = [
+            'content_id' => $this->thread->id,
+            'content_type' => 'thread',
+            'reason' => 'test no reply',
+            'administration_summary' => 'punish',
+        ];
+
+        $userInfo = $this->userA->info()->first();
+        $userUnreadReminders = $userInfo->unread_reminders;
+        $userAdminReminders = $userInfo->administration_reminders;
+
+        $this->actingAs($this->admin, 'api');
+        $manageData = array_merge($manageCommonData, [ 'content_no_reply' => true ]);
+        $response = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(200);
+        $attributes = $response->decodeResponseJson()['data']['attributes'];
+        $this->assertEquals($this->admin->id, $attributes['user_id']);
+        $this->assertEquals('禁止回复|', $attributes['task']);
+        $this->assertEquals($this->userA->id, $attributes['administratee_id']);
+        $this->assertEquals('thread', $attributes['administratable_type']);
+        $this->assertEquals($this->thread->id, $attributes['administratable_id']);
+        $this->assertEquals(true, $attributes['is_public']);
+        $this->assertEquals(0, $attributes['report_post_id']);
+
+        $thread = Thread::find($this->thread->id);
+        $this->assertEquals(1, $thread->no_reply);
+        // userA should be notified;
+        $userInfo = UserInfo::find($this->userA->id);
+        $this->assertEquals($userAdminReminders + 1,
+            $userInfo->administration_reminders);
+        $this->assertEquals($userUnreadReminders + 1,
+            $userInfo->unread_reminders);
+
+        $request = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(420);    // '没有可实施的操作'
+
+        // now undo the operation
+        $manageData = array_merge($manageCommonData, [ 'content_allow_reply' => true ]);
+        $request = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(200);
+
+        $thread = Thread::find($this->thread->id);
+        $this->assertEquals(0, $thread->no_reply);
+    }
+
+    // set a thread lock and then undo the action
+    /** @test */
+    public function set_thread_lock(){
+        $manageCommonData = [
+            'content_id' => $this->thread->id,
+            'content_type' => 'thread',
+            'reason' => 'test no reply',
+            'administration_summary' => 'punish',
+        ];
+
+        $userInfo = $this->userA->info()->first();
+        $userUnreadReminders = $userInfo->unread_reminders;
+        $userAdminReminders = $userInfo->administration_reminders;
+
+        $this->actingAs($this->admin, 'api');
+        $manageData = array_merge($manageCommonData, [ 'content_lock' => true ]);
+        $response = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(200);
+        $attributes = $response->decodeResponseJson()['data']['attributes'];
+        $this->assertEquals($this->admin->id, $attributes['user_id']);
+        $this->assertEquals('锁定|', $attributes['task']);
+        $this->assertEquals($this->userA->id, $attributes['administratee_id']);
+        $this->assertEquals('thread', $attributes['administratable_type']);
+        $this->assertEquals($this->thread->id, $attributes['administratable_id']);
+        $this->assertEquals(true, $attributes['is_public']);
+        $this->assertEquals(0, $attributes['report_post_id']);
+
+        $thread = Thread::find($this->thread->id);
+        $this->assertEquals(1, $thread->is_locked);
+        // userA should be notified;
+        $userInfo = UserInfo::find($this->userA->id);
+        $this->assertEquals($userAdminReminders + 1,
+            $userInfo->administration_reminders);
+        $this->assertEquals($userUnreadReminders + 1,
+            $userInfo->unread_reminders);
+
+        $request = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(420);    // '没有可实施的操作'
+
+        // now undo the operation
+        $manageData = array_merge($manageCommonData, [ 'content_unlock' => true ]);
+        $request = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(200);
+
+        $thread = Thread::find($this->thread->id);
+        $this->assertEquals(0, $thread->is_locked);
+    }
+
+    // change thread channel
+    /** @test */
+    public function changeThreadChannel(){
+        $manageCommonData = [
+            'content_id' => $this->thread->id,
+            'content_type' => 'thread',
+            'reason' => 'test thread channel',
+            'administration_summary' => 'punish',
+        ];
+
+        $userInfo = $this->userA->info()->first();
+        $userUnreadReminders = $userInfo->unread_reminders;
+        $userAdminReminders = $userInfo->administration_reminders;
+
+        $this->actingAs($this->admin, 'api');
+        $manageData = array_merge($manageCommonData,
+            [ 'content_change_channel' => true, 'content_change_channel_id' => 3 ]);
+        $response = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(200);
+        $attributes = $response->decodeResponseJson()['data']['attributes'];
+        $this->assertEquals($this->admin->id, $attributes['user_id']);
+        $this->assertEquals('转移主题:原创小说=>作业专区|', $attributes['task']);
+        $this->assertEquals($this->userA->id, $attributes['administratee_id']);
+        $this->assertEquals('thread', $attributes['administratable_type']);
+        $this->assertEquals($this->thread->id, $attributes['administratable_id']);
+        $this->assertEquals(true, $attributes['is_public']);
+        $this->assertEquals(0, $attributes['report_post_id']);
+
+        $thread = Thread::find($this->thread->id);
+        $this->assertEquals(3, $thread->channel_id);
+        // userA should be notified;
+        $userInfo = UserInfo::find($this->userA->id);
+        $this->assertEquals($userAdminReminders + 1,
+            $userInfo->administration_reminders);
+        $this->assertEquals($userUnreadReminders + 1,
+            $userInfo->unread_reminders);
+
+        $request = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(420);    // '没有可实施的操作'
+
+        // now undo the operation
+        $manageData = array_merge($manageCommonData,
+            [ 'content_change_channel' => true, 'content_change_channel_id' => 1 ]);
+        $request = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(200);
+
+        $thread = Thread::find($this->thread->id);
+        $this->assertEquals(1, $thread->channel_id);
+    }
+
+    // ================================================
+    // ================================================
 
     /** @test */
     public function owner_and_admin_can_view_useradminrecord(){
