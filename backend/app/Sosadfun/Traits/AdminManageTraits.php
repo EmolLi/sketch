@@ -114,10 +114,15 @@ trait AdminManageTraits{
         }
         // QUESTION:我这样改阔以嘛.. 这样request就不用pass content_user_id了
         // $user = User::find($request->content_user_id);
-        $user = User::find($content->user_id);
+        $user = null;
+        if ($content) {
+            if ($request->content_type == 'user') {
+                $user = $content;
+            }
+            else { $user = User::find($content->user_id); }
+        }
         if($user){
             $user_task = '';
-
             if($request->user_no_posting_days>0){
                 $user_task .= $this->user_no_posting($request->user_no_posting_days, $user);
             }
@@ -498,9 +503,9 @@ trait AdminManageTraits{
             foreach($posts as $post){
                 $this->content_add_tag('post', $tag, $post);
             }
+            return "全楼".$this->content_add_tag($content_type, $tag, $content);
         }
 
-        return "全楼".$this->content_add_tag($content_type, $tag, $content);
     }
     private function remove_tag_from_all_components($content_type, $tag_info, $content)
     {

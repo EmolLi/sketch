@@ -392,6 +392,280 @@ class AdminSystemTest extends TestCase
         $this->assertEquals(1, $thread->channel_id);
     }
 
+    // set a thread lock and then undo the action
+    /** @test */
+    public function content_pull_up(){
+        $manageCommonData = [
+            'content_id' => $this->thread->id,
+            'content_type' => 'thread',
+            'reason' => 'test no reply',
+            'administration_summary' => 'punish',
+        ];
+
+        $this->actingAs($this->admin, 'api');
+        $manageData = array_merge($manageCommonData, [ 'content_pull_up' => true ]);
+        $response = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(200);
+        $attributes = $response->decodeResponseJson()['data']['attributes'];
+        $this->assertEquals($this->admin->id, $attributes['user_id']);
+        $this->assertEquals('内容上浮|', $attributes['task']);
+        $this->assertEquals($this->userA->id, $attributes['administratee_id']);
+        $this->assertEquals('thread', $attributes['administratable_type']);
+        $this->assertEquals($this->thread->id, $attributes['administratable_id']);
+        $this->assertEquals(true, $attributes['is_public']);
+        $this->assertEquals(0, $attributes['report_post_id']);
+
+        $manageData = array_merge($manageCommonData, [ 'content_pull_down' => true ]);
+        $request = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(200);
+        $attributes = $request->decodeResponseJson()['data']['attributes'];
+        $this->assertEquals('内容下沉|', $attributes['task']);
+    }
+
+    /** @test */
+    public function content_delete(){
+        $post = factory('App\Models\Post')->create([
+            'thread_id' => $this->thread->id,
+            'user_id' => $this->userB->id,
+            'type' => 'post',
+        ]);
+
+        $manageCommonData = [
+            'content_id' => $post->id,
+            'content_type' => 'post',
+            'reason' => 'test',
+            'administration_summary' => 'punish',
+        ];
+
+        $userInfo = $this->userB->info()->first();
+        $userUnreadReminders = $userInfo->unread_reminders;
+        $userAdminReminders = $userInfo->administration_reminders;
+
+        $this->actingAs($this->admin, 'api');
+        $manageData = array_merge($manageCommonData,
+            [ 'content_delete' => true ]);
+        $response = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(200);
+        $attributes = $response->decodeResponseJson()['data']['attributes'];
+        $this->assertEquals('内容删除|', $attributes['task']);
+
+        $p = Post::find($post->id);
+        $this->assertEquals(null, $p);
+        // user should be notified;
+        $userInfo = UserInfo::find($this->userB->id);
+        $this->assertEquals($userAdminReminders + 1,
+            $userInfo->administration_reminders);
+        $this->assertEquals($userUnreadReminders + 1,
+            $userInfo->unread_reminders);
+
+        $request = $this->json('POST', 'api/admin/management', $manageData)
+            ->assertStatus(420);    // '没有可实施的操作'
+
+    }
+
+    /** @test */
+    public function add_tag(){
+        $manageCommonData = [
+            'content_id' => $this->thread->id,
+            'content_type' => 'thread',
+            'reason' => 'test',
+            'administration_summary' => 'punish',
+        ];
+
+        $userInfo = $this->userA->info()->first();
+        $userUnreadReminders = $userInfo->unread_reminders;
+        $userAdminReminders = $userInfo->administration_reminders;
+
+        $this->actingAs($this->admin, 'api');
+        $manageData = array_merge($manageCommonData,
+            [ 'add_tag' => '1' ]);
+        $response = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(200);
+        $attributes = $response->decodeResponseJson()['data']['attributes'];
+        $this->assertEquals($this->admin->id, $attributes['user_id']);
+        $this->assertEquals('添加标签:其他原创|', $attributes['task']);
+        $this->assertEquals($this->userA->id, $attributes['administratee_id']);
+        $this->assertEquals('thread', $attributes['administratable_type']);
+        $this->assertEquals($this->thread->id, $attributes['administratable_id']);
+        $this->assertEquals(true, $attributes['is_public']);
+        $this->assertEquals(0, $attributes['report_post_id']);
+
+        $t = Thread::find($this->thread->id)->tags()->find(1);
+        $this->assertNotNull($t);
+        // userA should be notified;
+        $userInfo = UserInfo::find($this->userA->id);
+        $this->assertEquals($userAdminReminders + 1,
+            $userInfo->administration_reminders);
+        $this->assertEquals($userUnreadReminders + 1,
+            $userInfo->unread_reminders);
+
+        // FIXME: you can add a tag twice, well actually it does not impact anything
+        // $request = $this->json('POST', 'api/admin/management', $manageData);
+                // ->assertStatus(420);    // '没有可实施的操作'
+
+        // now undo the operation
+        $manageData = array_merge($manageCommonData,
+            [ 'remove_tag' => '1' ]);
+        $request = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(200);
+
+        $t = Thread::find($this->thread->id)->tags()->find(1);
+        $this->assertNull($t);
+    }
+
+    // TODO: add tags to all component
+
+    /** @test */
+    public function remove_anonymous(){
+        $manageCommonData = [
+            'content_id' => $this->thread->id,
+            'content_type' => 'thread',
+            'reason' => 'test no reply',
+            'administration_summary' => 'punish',
+        ];
+
+        $this->actingAs($this->admin, 'api');
+        $manageData = array_merge($manageCommonData, [ 'content_is_anonymous' => true ]);
+        $response = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(200);
+        $attributes = $response->decodeResponseJson()['data']['attributes'];
+        $this->assertEquals('披上马甲|', $attributes['task']);
+
+        $thread = Thread::find($this->thread->id);
+        $this->assertEquals(1, $thread->is_anonymous);
+
+        $request = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(420);    // '没有可实施的操作'
+
+        // now undo the operation
+        $manageData = array_merge($manageCommonData, [ 'content_remove_anonymous' => true ]);
+        $request = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(200);
+
+        $thread = Thread::find($this->thread->id);
+        $this->assertEquals(0, $thread->is_anonymous);
+    }
+
+    /** @test */
+    public function content_type_change(){
+        $manageCommonData = [
+            'content_id' => $this->thread->id,
+            'content_type' => 'thread',
+            'reason' => 'test no reply',
+            'administration_summary' => 'punish',
+        ];
+
+        $this->actingAs($this->admin, 'api');
+        $manageData = array_merge($manageCommonData, [ 'content_is_anonymous' => true ]);
+        $response = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(200);
+        $attributes = $response->decodeResponseJson()['data']['attributes'];
+        $this->assertEquals('披上马甲|', $attributes['task']);
+
+        $thread = Thread::find($this->thread->id);
+        $this->assertEquals(1, $thread->is_anonymous);
+
+        $request = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(420);    // '没有可实施的操作'
+
+        // now undo the operation
+        $manageData = array_merge($manageCommonData, [ 'content_remove_anonymous' => true ]);
+        $request = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(200);
+
+        $thread = Thread::find($this->thread->id);
+        $this->assertEquals(0, $thread->is_anonymous);
+    }
+
+    // user mgmt
+    /** @test */
+    public function user_mgmt(){
+        $manageCommonData = [
+            'content_id' => $this->userA->id,
+            'content_type' => 'user',
+            'reason' => 'test',
+            'administration_summary' => 'punish',
+        ];
+
+        $this->userA->level = 5;
+        $info = UserInfo::find($this->userA->id);
+        $this->userA->save();
+
+        $this->actingAs($this->admin, 'api');
+        $manageData = array_merge($manageCommonData, [
+            'user_no_posting_days' => 3,
+            'user_no_logging_days' => 5,
+            'user_no_homework_days' => 6,
+            'gift_title_id' => 1,
+            'user_level_clear' => true,
+        ]);
+        $response = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(200);
+        $attributes = $response->decodeResponseJson()['data']['attributes'];
+        $this->assertEquals('用户禁言3天|禁止登陆5天|作业禁令6天|等级与虚拟物清零|赠予头衔:大咸者|', $attributes['task']);
+
+        $userInfo = UserInfo::find($this->userA->id);
+        $this->assertNotNull($userInfo->no_logging_until);
+        $this->assertNotNull($userInfo->no_posting_until);
+        $this->assertNotNull($userInfo->no_homework_until);
+        $user = User::find($this->userA->id);
+        $this->assertEquals(1, $user->no_logging);
+        $this->assertEquals(1, $user->no_posting);
+        $this->assertEquals(1, $user->no_homework);
+        $this->assertNotNull($user->titles()->find(1));
+        $this->assertEquals(0, $user->level);
+
+
+        // now undo the operation
+        $manageData = array_merge($manageCommonData, [
+            'user_allow_posting' => true,
+            'user_allow_logging' => true,
+            'user_allow_homework' => true,
+            'remove_title_id' => 1,
+            'user_value_change' => [
+                'salt' => 1000,
+                'ham' => 100,
+                'fish' => 500,
+                'level' => 3,
+                'token_limit' => 4,
+            ]
+        ]);
+        $request = $this->json('POST', 'api/admin/management', $manageData)
+            ->assertStatus(200);
+
+        $user = User::find($this->userA->id);
+        $info = UserInfo::find($this->userA->id);
+        $this->assertEquals(0, $user->no_logging);
+        $this->assertEquals(0, $user->no_posting);
+        $this->assertEquals(0, $user->no_homework);
+        $this->assertNull($user->titles()->find(1));
+        $this->assertEquals(1000, $info->salt);
+        $this->assertEquals(100, $info->ham);
+        $this->assertEquals(500, $info->fish);
+        $this->assertEquals(3, $user->level);
+        $this->assertEquals(4, $info->token_limit);
+
+    }
+
+    // public function handle_report_ticket() {
+    //     // create report post
+    //     // report thread
+    //     $reportThread = factory('App\Models\Thread')->create([
+    //         'channel_id' => 8,
+    //         'user_id' => $this->admin->id,
+    //         'is_bianyuan' => false,
+    //     ]);
+    //     $report = factory('App\Models\Post')->create([
+    //         'thread_id' => $reportThread->id,
+    //         'user_id' => $this->userB->id,
+    //         'type' => 'case',
+    //         'title' => '报告!这里有人在...',
+    //         'brief' => '世风日下，人心不古',
+    //         'body' => '震惊!这一切的背后到底是人性的扭曲还是道德的沦丧?'
+    //     ]);
+    //
+    // }
+
     // ================================================
     // ================================================
 
