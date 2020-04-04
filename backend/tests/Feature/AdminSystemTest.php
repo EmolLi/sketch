@@ -20,14 +20,22 @@ class AdminSystemTest extends TestCase
     public $chapterPost;
     public $chapterInfo;
     public $post;
+    public $reportThread;   //举报楼
 
     // TODO: add more test cases for manage and search record
     protected function setUp()
     {
         parent::setUp();
-        $this->userA = factory('App\Models\User')->create();    // thread author
-        $this->userB = factory('App\Models\User')->create();    // post author
+        $this->userA = factory('App\Models\User')->create([
+            'level' => 5,
+            'quiz_level' => 3,
+        ]);    // thread author
+        $this->userB = factory('App\Models\User')->create([
+            'level' => 5,
+            'quiz_level' => 3,
+        ]);    // post author
         $this->admin = factory('App\Models\User')->create(['role' => 'admin']);
+
 
         // create thread
         $this->thread = factory('App\Models\Thread')->create([
@@ -48,6 +56,43 @@ class AdminSystemTest extends TestCase
             'user_id' => $this->userB->id,
             'type' => 'post',
         ]);
+        $this->reportThread = factory('App\Models\Thread')->create([
+            'channel_id' => 8,
+            'user_id' => $this->userA->id,
+            'is_bianyuan' => false,
+            'title' => '举报楼',
+
+        ]);
+    }
+
+    /** @test */
+    public function report_thread(){
+        // create thread
+        $this->actingAs($this->userA, 'api');
+        $thread = factory('App\Models\Thread')->create([
+            'title' => '嘿嘿',
+            'channel_id' => 1,
+            'user_id' => $this->userA->id,
+            'is_bianyuan' => false,
+        ]);
+        // echo($thread->id);
+        $this->actingAs($this->userB, 'api');
+        $data = [
+            'report_kind' => '目录违禁',
+            'title' => '标题带ABO可不行哦',
+            'body' => '我就要带!你咬我呀!',
+            'reviewee_id' => $thread->id,
+            'reviewee_type'=> 'thread',
+            'thread_id' => $this->reportThread->id,
+            'finished' => '已完成',
+            'type' => 'case',
+        ];
+        $request = $this->json('POST', 'api/submit_report', $data)
+            ->assertStatus(200);
+
+        $request = $request->decodeResponseJson()['data'];
+        $post = Post::find($request['id']);
+        $this->assertEquals($post->type, 'case');
     }
 
     /** @test */

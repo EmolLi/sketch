@@ -7,6 +7,7 @@ use App\Models\Post;
 use App\Models\Thread;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StorePost;
+use App\Http\Requests\StoreReport;
 use App\Http\Resources\PostResource;
 use App\Http\Resources\ThreadProfileResource;
 use App\Http\Resources\ThreadBriefResource;
@@ -134,6 +135,34 @@ class PostController extends Controller
 
         $post->update(['fold_state'=>2]);
 
+        return response()->success(new PostResource($post));
+    }
+
+    public function submit_report(StoreReport $form)
+    {
+        $thread = $this->findThread($form->thread_id);
+
+        if($thread->channel()->type!="report"){ abort(409, '非举报楼'); }
+
+        $user = auth('api')->user();
+        if ((!$user->isAdmin()) &&
+            ($thread->is_locked || ((!$thread->is_public)&&($thread->user_id != $user->id)) )) {
+            abort(403, '本主题锁定或设为隐私，不能回帖');
+        }
+        if($user->no_posting){
+            abort(497, '你被禁言中，无法回帖');
+        }
+
+        if(!$user->isAdmin()&&($user->level<4||$user->quiz_level<3)){
+            abort(406, '你的等级或答题等级不足，暂时无法提交举报');
+        }
+
+        if($form->finished!="已完成"){
+            abort(407, '已完成确认项不正确');
+        }
+
+        $post = $form->generateReport($thread);
+        event(new NewPost($post));
         return response()->success(new PostResource($post));
     }
 }

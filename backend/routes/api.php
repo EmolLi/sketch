@@ -56,6 +56,7 @@ Route::group(['middleware' => ['throttle:60,1,all']], function () {
     Route::get('/', 'API\PageController@home')->name('home');// 网站首页
 
     // admin system
+    Route::post('submit_report', "API\PostController@submit_report");
     Route::get('administration_records', 'API\PageController@administration_records');// 管理目录
     Route::get('user/{user}/administration_records', 'API\MessageController@user_administration_records'); // get user admin records
     Route::post('admin/management','API\AdminController@management');

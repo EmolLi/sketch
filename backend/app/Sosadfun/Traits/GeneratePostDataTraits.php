@@ -12,7 +12,10 @@ trait GeneratePostDataTraits{
     public function generatePostData($thread)
     {
         $data = $this->only('body','brief','title','type');
+        /*
+        QUESTION:这句是怎么回事...不允许在不是自己的楼里发帖?
         if(in_array($this->type, config('constants.owner_component_types'))&&$thread->user_id!=auth('api')->id()){abort(403);}
+        */
         if(!in_array($this->type,config('constants.all_post_types'))){abort(422,'post_type not allowed');}
         $data['body'] = StringProcess::check_html_tag($data['body']);
         if($this->isDuplicatePost($data)){

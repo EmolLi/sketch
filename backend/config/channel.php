@@ -91,7 +91,7 @@ return [
         'channel_name' => '违规举报',
         'channel_explanation' => '违规举报板块从此进入',
         'order_by' => '10',
-        'type' => 'thread',
+        'type' => 'report',
         'allow_anonymous' => true,
         'allow_edit' => false,
         'allow_deletion' => false,

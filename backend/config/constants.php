@@ -133,13 +133,14 @@ return [
     'task_titles' => [
         '2019winter' => 61,
     ],
-    'content_types' => [
+    'admin_content_types' => [
         'thread' => '主题',
         'post' => '回帖',
         'user' => '用户',
         'status' => '动态',
         'quote' => '题头',
     ],
+    'report_interval_days' => 2, // 2天中不能重复举报相同内容
     'report_case_summary'=>[
         'approve' => '受理',
         'disapprove' => '暂不处理',

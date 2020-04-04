@@ -72,7 +72,7 @@ class AdminController extends Controller
         $this->validate($request, [
             'content_id' => 'required|numeric',
             'content_type' => 'required|in:'.(
-                implode(",",array_keys(config('constants.content_types')))),
+                implode(",",array_keys(config('constants.admin_content_types')))),
             'reason' => 'required|string',
             'administration_summary' => 'required|in:'.(
                 implode(",",array_keys(config('constants.administration_summary')))),
