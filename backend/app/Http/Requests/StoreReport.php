@@ -41,7 +41,6 @@ class StoreReport extends FormRequest
             'reviewee_id' => 'numeric|min:0',
             'reviewee_type' => 'nullable|string|min:0|max:10',
             'thread_id' => 'required|numeric|min:0',
-            'finished' => 'required|string',
         ];
     }
 

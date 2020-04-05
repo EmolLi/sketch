@@ -84,7 +84,6 @@ class AdminSystemTest extends TestCase
             'reviewee_id' => $thread->id,
             'reviewee_type'=> 'thread',
             'thread_id' => $this->reportThread->id,
-            'finished' => '已完成',
             'type' => 'case',
         ];
         $request = $this->json('POST', 'api/submit_report', $data)
@@ -182,7 +181,7 @@ class AdminSystemTest extends TestCase
         // now fold the post again, as we has already fold the post, we should get an error
         // $manageFoldData = array_merge($manageCommonData, [ 'content_fold' => true ]));
         $request = $this->json('POST', 'api/admin/management', $manageFoldData)
-                ->assertStatus(420);    // '没有可实施的操作'
+                ->assertStatus(204);    // '没有可实施的操作'
 
         // now unfold the post
         $manageUnfoldData = array_merge($manageCommonData, [ 'content_unfold' => true ]);
@@ -232,7 +231,7 @@ class AdminSystemTest extends TestCase
             $userInfo->unread_reminders);
 
         $request = $this->json('POST', 'api/admin/management', $manageData)
-                ->assertStatus(420);    // '没有可实施的操作'
+                ->assertStatus(204);    // '没有可实施的操作'
 
         // now undo the operation
         $manageData = array_merge($manageCommonData, [ 'content_not_bianyuan' => true ]);
@@ -280,7 +279,7 @@ class AdminSystemTest extends TestCase
             $userInfo->unread_reminders);
 
         $request = $this->json('POST', 'api/admin/management', $manageData)
-                ->assertStatus(420);    // '没有可实施的操作'
+                ->assertStatus(204);    // '没有可实施的操作'
 
         // now undo the operation
         $manageData = array_merge($manageCommonData, [ 'content_is_public' => true ]);
@@ -328,7 +327,7 @@ class AdminSystemTest extends TestCase
             $userInfo->unread_reminders);
 
         $request = $this->json('POST', 'api/admin/management', $manageData)
-                ->assertStatus(420);    // '没有可实施的操作'
+                ->assertStatus(204);    // '没有可实施的操作'
 
         // now undo the operation
         $manageData = array_merge($manageCommonData, [ 'content_allow_reply' => true ]);
@@ -376,7 +375,7 @@ class AdminSystemTest extends TestCase
             $userInfo->unread_reminders);
 
         $request = $this->json('POST', 'api/admin/management', $manageData)
-                ->assertStatus(420);    // '没有可实施的操作'
+                ->assertStatus(204);    // '没有可实施的操作'
 
         // now undo the operation
         $manageData = array_merge($manageCommonData, [ 'content_unlock' => true ]);
@@ -425,7 +424,7 @@ class AdminSystemTest extends TestCase
             $userInfo->unread_reminders);
 
         $request = $this->json('POST', 'api/admin/management', $manageData)
-                ->assertStatus(420);    // '没有可实施的操作'
+                ->assertStatus(204);    // '没有可实施的操作'
 
         // now undo the operation
         $manageData = array_merge($manageCommonData,
@@ -504,7 +503,7 @@ class AdminSystemTest extends TestCase
             $userInfo->unread_reminders);
 
         $request = $this->json('POST', 'api/admin/management', $manageData)
-            ->assertStatus(420);    // '没有可实施的操作'
+            ->assertStatus(204);    // '没有可实施的操作'
 
     }
 
@@ -546,7 +545,7 @@ class AdminSystemTest extends TestCase
 
         // FIXME: you can add a tag twice, well actually it does not impact anything
         // $request = $this->json('POST', 'api/admin/management', $manageData);
-                // ->assertStatus(420);    // '没有可实施的操作'
+                // ->assertStatus(204);    // '没有可实施的操作'
 
         // now undo the operation
         $manageData = array_merge($manageCommonData,
@@ -580,7 +579,7 @@ class AdminSystemTest extends TestCase
         $this->assertEquals(1, $thread->is_anonymous);
 
         $request = $this->json('POST', 'api/admin/management', $manageData)
-                ->assertStatus(420);    // '没有可实施的操作'
+                ->assertStatus(204);    // '没有可实施的操作'
 
         // now undo the operation
         $manageData = array_merge($manageCommonData, [ 'content_remove_anonymous' => true ]);
@@ -611,7 +610,7 @@ class AdminSystemTest extends TestCase
         $this->assertEquals(1, $thread->is_anonymous);
 
         $request = $this->json('POST', 'api/admin/management', $manageData)
-                ->assertStatus(420);    // '没有可实施的操作'
+                ->assertStatus(204);    // '没有可实施的操作'
 
         // now undo the operation
         $manageData = array_merge($manageCommonData, [ 'content_remove_anonymous' => true ]);
@@ -692,25 +691,143 @@ class AdminSystemTest extends TestCase
 
     }
 
-    // public function handle_report_ticket() {
-    //     // create report post
-    //     // report thread
-    //     $reportThread = factory('App\Models\Thread')->create([
-    //         'channel_id' => 8,
-    //         'user_id' => $this->admin->id,
-    //         'is_bianyuan' => false,
-    //     ]);
-    //     $report = factory('App\Models\Post')->create([
-    //         'thread_id' => $reportThread->id,
-    //         'user_id' => $this->userB->id,
-    //         'type' => 'case',
-    //         'title' => '报告!这里有人在...',
-    //         'brief' => '世风日下，人心不古',
-    //         'body' => '震惊!这一切的背后到底是人性的扭曲还是道德的沦丧?'
-    //     ]);
-    //
-    // }
+    public function createTicket(){
+        $userA = factory('App\Models\User')->create([
+            'level' => 5,
+            'quiz_level' => 3,
+        ]);
+        $userB = factory('App\Models\User')->create([
+            'level' => 5,
+            'quiz_level' => 3,
+        ]);
+        // create report post
+        // report thread
+        $thread = factory('App\Models\Thread')->create([
+            'channel_id' => 8,
+            'user_id' => $userA->id,
+            'is_bianyuan' => false,
+        ]);
 
+        $this->actingAs($userB, 'api');
+        $data = [
+            'report_kind' => '目录违禁',
+            'title' => '报告!这里有人在...',
+            'body' => '震惊!这一切的背后到底是人性的扭曲还是道德的沦丧?',
+            'reviewee_id' => $thread->id,
+            'reviewee_type'=> 'thread',
+            'thread_id' => $this->reportThread->id,
+            'type' => 'case',
+        ];
+        $report = $this->json('POST', 'api/submit_report', $data)
+            ->assertStatus(200);
+        $report = $report->decodeResponseJson()['data'];
+        return [
+            'userA' => $userA,
+            'userB' => $userB,
+            'thread' => $thread,
+            'report' => $report,
+        ];
+    }
+    /** @test */
+    public function handle_report_ticket_approve() {
+
+        $common_data = $this->createTicket();
+        // handle this report
+        $manageData = [
+            'content_id' => $common_data['thread']->id,
+            'content_type' => 'thread',
+            'reason' => 'test',
+            'report_post_id' => $common_data['report']['id'],
+            'report_summary' => 'approve',
+            'administration_summary' => 'punish',
+            'content_lock' => true,
+            'user_no_posting_days' => 3,
+        ];
+
+        $this->actingAs($this->admin, 'api');
+        $response = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(200);
+        $attributes = $response->decodeResponseJson()['data']['attributes'];
+        $this->assertEquals('举报受理：锁定|用户禁言3天|', $attributes['task']);
+
+        $userInfo = UserInfo::find($common_data['userA']->id);
+        $this->assertNotNull($userInfo->no_posting_until);
+        $user = User::find($common_data['userA']->id);
+        $this->assertEquals(1, $user->no_posting);
+        $thread = Thread::find($common_data['thread']->id);
+        $this->assertEquals(1, $thread->is_locked);
+
+        $report = Post::find($common_data['report']['id']);
+        $this->assertEquals('approve', $report->info->summary);
+    }
+
+    /** @test */
+    public function handle_report_ticket_disapprove_no_action() {
+
+        $common_data = $this->createTicket();
+        // handle this report
+        $manageData = [
+            'content_id' => $common_data['thread']->id,
+            'content_type' => 'thread',
+            'reason' => 'test',
+            'report_post_id' => $common_data['report']['id'],
+            'report_summary' => 'disapprove',
+            'administration_summary' => 'neutral',
+        ];
+
+        $this->actingAs($this->admin, 'api');
+        $response = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(204);
+
+        $report = Post::find($common_data['report']['id']);
+        $this->assertEquals('disapprove', $report->info->summary);
+    }
+    /** @test */
+    public function handle_report_ticket_abuse() {
+
+        $common_data = $this->createTicket();
+        // QUESTION: 如果我想在用factory创建user时,就设定一些userInfo的值,该怎么办呢
+        $userInfo = UserInfo::find($common_data['userB']->id);
+        $userInfo->salt = 1000;
+        $userInfo->ham = 1000;
+        $userInfo->fish = 1000;
+        $userInfo->save();
+
+        // handle this report
+        $manageData = [
+            'content_id' => $common_data['thread']->id,
+            'content_type' => 'thread',
+            'reason' => 'test',
+            'report_post_id' => $common_data['report']['id'],
+            'report_summary' => 'abuse',
+            'administration_summary' => 'punish',
+            'report_post_fold' => true,
+            'reporter_no_posting_days' => 3,
+            'reporter_no_logging_days' => 4,
+            'reporter_value_change' => [
+                'salt' => -100,
+                'ham' => -200,
+                'fish' => -300,
+            ],
+        ];
+
+        $this->actingAs($this->admin, 'api');
+        $response = $this->json('POST', 'api/admin/management', $manageData)
+                ->assertStatus(200);
+        $attributes = $response->decodeResponseJson()['data']['attributes'];
+        $this->assertEquals('举报行为管理：举报者举报内容折叠|禁言3天|禁止登陆4天|盐粒-100|咸鱼-300|火腿-200|', $attributes['task']);
+
+        $report = Post::find($common_data['report']['id']);
+        $this->assertEquals('abuse', $report->info->summary);
+        $this->assertEquals(1, $report->fold_state);
+        $reporter = User::find($common_data['userB']->id);
+        $reporterInfo = UserInfo::find($common_data['userB']->id);
+        $this->assertEquals(900, $reporterInfo->salt);
+        $this->assertEquals(800, $reporterInfo->ham);
+        $this->assertEquals(700, $reporterInfo->fish);
+        $this->assertEquals(1, $reporter->no_posting);
+        $this->assertEquals(1, $reporter->no_logging);
+    }
     // ================================================
     // ================================================
 

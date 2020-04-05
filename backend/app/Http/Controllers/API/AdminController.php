@@ -29,8 +29,6 @@ use ConstantObjects;
 use CacheUser;
 use App\Sosadfun\Traits\AdminManageTraits;
 
-// QUESTION: 为什么controllers/API 里有一个 adminController,
-// controllers/ 里也有一个adminController 呢?
 
 // TODO: merge to one
 // content_not_public（内容不公开：如果存在本项就处理）
@@ -64,7 +62,7 @@ class AdminController extends Controller
         if($request->report_post_id&&$request->report_summary!="approve"){
             $administration = $this->report_management($request, $report_post);
         }
-        if (is_null($administration)) { abort(420, '没有可实施的操作'); }
+        if (is_null($administration)) { abort(204, '没有可实施的操作'); }
         return response()->success(new AdministrationResource($administration));
     }
 

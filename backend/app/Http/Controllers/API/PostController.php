@@ -157,10 +157,6 @@ class PostController extends Controller
             abort(406, '你的等级或答题等级不足，暂时无法提交举报');
         }
 
-        if($form->finished!="已完成"){
-            abort(407, '已完成确认项不正确');
-        }
-
         $post = $form->generateReport($thread);
         event(new NewPost($post));
         return response()->success(new PostResource($post));
