@@ -20,4 +20,12 @@ class HistoricalUserLogin extends Model
         return $this->belongsTo(User::class, 'user_id')->select('id','name','title_id','level');
     }
 
+    public function scopeCreationIPLike($query, $ip)
+    {
+        if($ip){
+            return $query->where('ip','like',$ip.'%');
+        }
+        return $query;
+    }
+
 }

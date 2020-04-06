@@ -90,6 +90,14 @@ class Quote extends Model
         return $query;
     }
 
+    public function scopeBodyLike($query, $content)
+    {
+        if($content) {
+            return $query->where('body','like','%'.$content.'%');
+        }
+        return $query;
+    }
+
     public function latest_rewards()
     {
         return \App\Models\Reward::with('author')
