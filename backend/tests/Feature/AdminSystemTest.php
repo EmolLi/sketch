@@ -134,7 +134,7 @@ class AdminSystemTest extends TestCase
 
     // ================================================
     // ================ management ====================
-    //=================================================
+    // ================================================
     // fold and unfold a post
     /** @test */
     public function fold_a_post(){
@@ -879,6 +879,12 @@ class AdminSystemTest extends TestCase
 
     }
 
+
+    // ================================================
+    // ================ search records ================
+    // ================================================
+
+
     /** @test */
     public function admin_search_record(){
         $userAEmail = $this->userA->email;
@@ -995,6 +1001,68 @@ class AdminSystemTest extends TestCase
                         ]
                     ],
                 ]]);
+
+
+        // search info about user 1
+        $query = 'api/admin/searchrecords?name_type=user_id&name=1';
+        $this->get($query)
+            ->assertStatus(200);
+
+        $query = 'api/admin/searchrecords?name_type=is_forbidden';
+        $this->get($query)
+            ->assertStatus(200);
+
+        $query = 'api/admin/searchrecords?name_type=username&name='.$this->userA->name;
+        $this->get($query)
+            ->assertStatus(200);
+
+        $query = 'api/admin/searchrecords?name_type=ip_address&name=180.193.127.19';
+        $this->get($query)
+            ->assertStatus(200);
+
+        $query = 'api/admin/searchrecords?name_type=latest_created_user';
+        $this->get($query)
+            ->assertStatus(200);
+
+        $query = 'api/admin/searchrecords?name_type=latest_invited_user';
+        $this->get($query)
+            ->assertStatus(200);
+
+        $query = 'api/admin/searchrecords?name_type=latest_email_modification';
+        $this->get($query)
+            ->assertStatus(200);
+
+        $query = 'api/admin/searchrecords?name_type=latest_password_reset';
+        $this->get($query)
+            ->assertStatus(200);
+
+        $query = 'api/admin/searchrecords?name_type=max_suspicious_sessions';
+        $this->get($query)
+            ->assertStatus(200);
+
+        $query = 'api/admin/searchrecords?name_type=active_suspicious_sessions';
+        $this->get($query)
+            ->assertStatus(200);
+
+        $query = 'api/admin/searchrecords?name=a&name_type=application_essay_like';
+        $this->get($query)
+            ->assertStatus(200);
+
+        $query = 'api/admin/searchrecords?name=1&name_type=application_record_id';
+        $this->get($query)
+            ->assertStatus(200);
+
+/*      FIXME: AdminReviewQuote table missing, going to fail miserably
+        $query = 'api/admin/searchrecords?name=a&name_type=quote_like';
+        $this->get($query)
+            ->assertStatus(200);
+*/
+        $query = 'api/admin/searchrecords?name_type=newest_long_post';
+        $this->get($query)
+            ->assertStatus(200);
+
+
+
     }
 
 
